@@ -26,6 +26,7 @@ func (d *DataProcessor) Run() {
 func (d *DataProcessor) doSomething(i int) int {
 	time.Sleep(100 * time.Millisecond)
 	j := i + 1
+	fmt.Printf("producing result %d\n", j)
 	return j
 }
 

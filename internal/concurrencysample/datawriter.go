@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -11,13 +12,25 @@ import (
 // DataWriter ...
 type DataWriter struct {
 	Ch  chan int
-	lag time.Duration
+	Lag time.Duration
+	wg  sync.WaitGroup
 }
 
 // Start ...
-func (w *DataWriter) Start() {
+func (w *DataWriter) Start(workerCount int) {
 	w.setupInterruptHandler()
-	w.lag = 50 * time.Millisecond
+	w.Lag = 10 * time.Millisecond
+	w.wg.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go w.startWorker()
+	}
+}
+
+// WaitForFinish ...
+func (w *DataWriter) WaitForFinish() {
+	w.wg.Wait()
+}
+func (w *DataWriter) startWorker() {
 	for {
 		data, ok := <-w.Ch
 		if !ok {
@@ -25,10 +38,11 @@ func (w *DataWriter) Start() {
 		}
 		w.writeToDb(data)
 	}
+	w.wg.Done()
 }
 
 func (w *DataWriter) writeToDb(data int) {
-	time.Sleep(w.lag)
+	time.Sleep(w.Lag)
 	fmt.Printf("Writing %d to DB\n", data)
 }
 
@@ -38,14 +52,13 @@ func (w *DataWriter) setupInterruptHandler() {
 	go func() {
 		for i := 1; ; i++ {
 			<-c
-			fmt.Println("\r- Ctrl+C pressed in Terminal")
 			switch {
 			case i == 1:
-				w.lag = 500 * time.Millisecond
+				w.Lag = 1000 * time.Millisecond
 			case i == 2:
-				w.lag = 50 * time.Millisecond
+				w.Lag = 10000 * time.Millisecond
 			case i == 3:
-				os.Exit(0)
+				w.Lag = 10 * time.Millisecond
 			}
 		}
 	}()

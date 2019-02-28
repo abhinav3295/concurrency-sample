@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-// DataProcessor ...
-type DataProcessor struct {
+// DataProducer ...
+type DataProducer struct {
 	ch   chan<- int
 	stop bool
 }
 
-// NewDataProcessor ...
-func NewDataProcessor(ch chan<- int) *DataProcessor {
-	return &DataProcessor{
+// NewDataProducer ...
+func NewDataProducer(ch chan<- int) *DataProducer {
+	return &DataProducer{
 		ch: ch,
 	}
 }
 
 // Run ...
-func (d *DataProcessor) Run() {
+func (d *DataProducer) Run() {
 	d.stop = false
 	d.setupInterruptHandler()
 	i := 0
@@ -38,18 +38,18 @@ func (d *DataProcessor) Run() {
 	close(d.ch)
 }
 
-func (d *DataProcessor) doSomething(i int) int {
+func (d *DataProducer) doSomething(i int) int {
 	time.Sleep(100 * time.Millisecond)
 	j := i
 	return j
 }
 
-func (d *DataProcessor) writeToRedis(data int) {
+func (d *DataProducer) writeToRedis(data int) {
 	time.Sleep(50 * time.Millisecond)
 	fmt.Printf("Write %d to REDIS\n", data)
 }
 
-func (d *DataProcessor) setupInterruptHandler() {
+func (d *DataProducer) setupInterruptHandler() {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {

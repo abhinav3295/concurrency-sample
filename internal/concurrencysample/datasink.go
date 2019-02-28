@@ -9,22 +9,22 @@ import (
 	"time"
 )
 
-// DataWriter ...
-type DataWriter struct {
+// DbSink ...
+type DbSink struct {
 	ch  <-chan int
 	lag time.Duration
 	wg  sync.WaitGroup
 }
 
-// NewDataWriter ...
-func NewDataWriter(ch <-chan int) *DataWriter {
-	return &DataWriter{
+// NewDbSink ...
+func NewDbSink(ch <-chan int) *DbSink {
+	return &DbSink{
 		ch: ch,
 	}
 }
 
 // Start ...
-func (w *DataWriter) Start(workerCount int) {
+func (w *DbSink) Start(workerCount int) {
 	w.setupInterruptHandler()
 	w.lag = 10 * time.Millisecond
 	w.wg.Add(workerCount)
@@ -34,10 +34,10 @@ func (w *DataWriter) Start(workerCount int) {
 }
 
 // WaitForFinish ...
-func (w *DataWriter) WaitForFinish() {
+func (w *DbSink) WaitForFinish() {
 	w.wg.Wait()
 }
-func (w *DataWriter) startWorker() {
+func (w *DbSink) startWorker() {
 	for {
 		data, ok := <-w.ch
 		if !ok {
@@ -48,12 +48,12 @@ func (w *DataWriter) startWorker() {
 	w.wg.Done()
 }
 
-func (w *DataWriter) writeToDb(data int) {
+func (w *DbSink) writeToDb(data int) {
 	time.Sleep(w.lag)
 	fmt.Printf("Writing %d to DB\n", data)
 }
 
-func (w *DataWriter) setupInterruptHandler() {
+func (w *DbSink) setupInterruptHandler() {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {

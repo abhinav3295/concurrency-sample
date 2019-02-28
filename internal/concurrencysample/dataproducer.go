@@ -43,11 +43,7 @@ func (d *DataProducer) Run() {
 		defer close(d.ch)
 		for d.stop == 0 {
 			d.doSomething(i)
-			select {
-			case d.ch <- i:
-			default:
-				d.writeToRedis(i)
-			}
+			d.ch <- i
 			i = i + 1
 		}
 	}()

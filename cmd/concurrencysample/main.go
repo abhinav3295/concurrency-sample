@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	producer := concurrencysample.NewDataProducer(4)
+	producer := concurrencysample.NewDataProducer(0)
 	sink := concurrencysample.NewDbSink(2)
 
 	sink.Listen(producer)

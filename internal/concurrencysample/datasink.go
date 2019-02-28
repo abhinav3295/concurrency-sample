@@ -11,25 +11,25 @@ import (
 
 // DbSink ...
 type DbSink struct {
-	ch  <-chan int
-	lag time.Duration
-	wg  sync.WaitGroup
+	workers int
+	lag     time.Duration
+	wg      sync.WaitGroup
 }
 
 // NewDbSink ...
-func NewDbSink(ch <-chan int) *DbSink {
+func NewDbSink(workers int) *DbSink {
 	return &DbSink{
-		ch: ch,
+		workers: workers,
 	}
 }
 
-// Start ...
-func (w *DbSink) Start(workerCount int) {
+// Listen ...
+func (w *DbSink) Listen(producer Producer) {
 	w.setupInterruptHandler()
 	w.lag = 10 * time.Millisecond
-	w.wg.Add(workerCount)
-	for i := 0; i < workerCount; i++ {
-		go w.startWorker()
+	w.wg.Add(w.workers)
+	for i := 0; i < w.workers; i++ {
+		go w.startWorker(producer.GetChannel())
 	}
 }
 
@@ -37,9 +37,9 @@ func (w *DbSink) Start(workerCount int) {
 func (w *DbSink) WaitForFinish() {
 	w.wg.Wait()
 }
-func (w *DbSink) startWorker() {
+func (w *DbSink) startWorker(ch <-chan int) {
 	for {
-		data, ok := <-w.ch
+		data, ok := <-ch
 		if !ok {
 			break
 		}

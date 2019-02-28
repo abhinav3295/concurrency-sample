@@ -4,18 +4,30 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
 
+// Producer ...
+type Producer interface {
+	GetChannel() <-chan int
+}
+
 // DataProducer ...
 type DataProducer struct {
-	ch   chan<- int
-	stop bool
+	ch   chan int
+	stop int32
+}
+
+// GetChannel returns the communication channel as read-only
+func (d *DataProducer) GetChannel() <-chan int {
+	return d.ch
 }
 
 // NewDataProducer ...
-func NewDataProducer(ch chan<- int) *DataProducer {
+func NewDataProducer(buffer int) *DataProducer {
+	ch := make(chan int, buffer)
 	return &DataProducer{
 		ch: ch,
 	}
@@ -23,19 +35,22 @@ func NewDataProducer(ch chan<- int) *DataProducer {
 
 // Run ...
 func (d *DataProducer) Run() {
-	d.stop = false
+	d.stop = 0
 	d.setupInterruptHandler()
 	i := 0
-	for !d.stop {
-		d.doSomething(i)
-		select {
-		case d.ch <- i:
-		default:
-			d.writeToRedis(i)
+
+	go func() {
+		defer close(d.ch)
+		for d.stop == 0 {
+			d.doSomething(i)
+			select {
+			case d.ch <- i:
+			default:
+				d.writeToRedis(i)
+			}
+			i = i + 1
 		}
-		i = i + 1
-	}
-	close(d.ch)
+	}()
 }
 
 func (d *DataProducer) doSomething(i int) int {
@@ -50,13 +65,13 @@ func (d *DataProducer) writeToRedis(data int) {
 }
 
 func (d *DataProducer) setupInterruptHandler() {
-	c := make(chan os.Signal, 2)
+	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for i := 1; ; i++ {
 			<-c
 			if i >= 3 {
-				d.stop = true
+				atomic.CompareAndSwapInt32(&d.stop, 0, 1)
 			}
 		}
 	}()

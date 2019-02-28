@@ -5,12 +5,11 @@ import (
 )
 
 func main() {
-	ch := make(chan int, 4)
-	sink := concurrencysample.NewDbSink(ch)
-	producer := concurrencysample.NewDataProducer(ch)
+	producer := concurrencysample.NewDataProducer(4)
+	sink := concurrencysample.NewDbSink(2)
 
-	go sink.Start(2)
-
+	sink.Listen(producer)
 	producer.Run()
+
 	sink.WaitForFinish()
 }

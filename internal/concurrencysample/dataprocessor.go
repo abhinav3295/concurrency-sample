@@ -10,30 +10,25 @@ import (
 
 // DataProcessor ...
 type DataProcessor struct {
-	Ch          chan int
-	StopChannel chan bool
+	Ch   chan int
+	stop bool
 }
 
 // Run ...
 func (d *DataProcessor) Run() {
-	d.StopChannel = make(chan bool, 1)
+	d.stop = false
 	d.setupInterruptHandler()
-	stop := false
 	i := 0
-	for !stop {
+	for !d.stop {
 		d.doSomething(i)
 		select {
-		case stop = <-d.StopChannel:
-			if stop {
-				close(d.Ch)
-			}
-
 		case d.Ch <- i:
 		default:
-			d.writeToKafka(i)
+			d.writeToRedis(i)
 		}
 		i = i + 1
 	}
+	close(d.Ch)
 }
 
 func (d *DataProcessor) doSomething(i int) int {
@@ -42,9 +37,9 @@ func (d *DataProcessor) doSomething(i int) int {
 	return j
 }
 
-func (d *DataProcessor) writeToKafka(data int) {
+func (d *DataProcessor) writeToRedis(data int) {
 	time.Sleep(50 * time.Millisecond)
-	fmt.Printf("Write %d to KAFKA\n", data)
+	fmt.Printf("Write %d to REDIS\n", data)
 }
 
 func (d *DataProcessor) setupInterruptHandler() {
@@ -53,9 +48,8 @@ func (d *DataProcessor) setupInterruptHandler() {
 	go func() {
 		for i := 1; ; i++ {
 			<-c
-			switch {
-			case i >= 4:
-				d.StopChannel <- true
+			if i >= 3 {
+				d.stop = true
 			}
 		}
 	}()

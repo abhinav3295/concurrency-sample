@@ -52,12 +52,12 @@ func (w *DataWriter) setupInterruptHandler() {
 	go func() {
 		for i := 1; ; i++ {
 			<-c
-			switch {
-			case i == 1:
+			switch i {
+			case 1:
 				w.Lag = 1000 * time.Millisecond
-			case i == 2:
+			case 2:
 				w.Lag = 10000 * time.Millisecond
-			case i == 3:
+			case 3:
 				w.Lag = 10 * time.Millisecond
 			}
 		}

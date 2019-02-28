@@ -11,15 +11,22 @@ import (
 
 // DataWriter ...
 type DataWriter struct {
-	Ch  chan int
-	Lag time.Duration
+	ch  <-chan int
+	lag time.Duration
 	wg  sync.WaitGroup
+}
+
+// NewDataWriter ...
+func NewDataWriter(ch <-chan int) *DataWriter {
+	return &DataWriter{
+		ch: ch,
+	}
 }
 
 // Start ...
 func (w *DataWriter) Start(workerCount int) {
 	w.setupInterruptHandler()
-	w.Lag = 10 * time.Millisecond
+	w.lag = 10 * time.Millisecond
 	w.wg.Add(workerCount)
 	for i := 0; i < workerCount; i++ {
 		go w.startWorker()
@@ -32,7 +39,7 @@ func (w *DataWriter) WaitForFinish() {
 }
 func (w *DataWriter) startWorker() {
 	for {
-		data, ok := <-w.Ch
+		data, ok := <-w.ch
 		if !ok {
 			break
 		}
@@ -42,7 +49,7 @@ func (w *DataWriter) startWorker() {
 }
 
 func (w *DataWriter) writeToDb(data int) {
-	time.Sleep(w.Lag)
+	time.Sleep(w.lag)
 	fmt.Printf("Writing %d to DB\n", data)
 }
 
@@ -54,11 +61,11 @@ func (w *DataWriter) setupInterruptHandler() {
 			<-c
 			switch i {
 			case 1:
-				w.Lag = 1000 * time.Millisecond
+				w.lag = 1000 * time.Millisecond
 			case 2:
-				w.Lag = 10000 * time.Millisecond
+				w.lag = 10000 * time.Millisecond
 			case 3:
-				w.Lag = 10 * time.Millisecond
+				w.lag = 10 * time.Millisecond
 			}
 		}
 	}()

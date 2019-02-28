@@ -10,8 +10,15 @@ import (
 
 // DataProcessor ...
 type DataProcessor struct {
-	Ch   chan int
+	ch   chan<- int
 	stop bool
+}
+
+// NewDataProcessor ...
+func NewDataProcessor(ch chan<- int) *DataProcessor {
+	return &DataProcessor{
+		ch: ch,
+	}
 }
 
 // Run ...
@@ -22,13 +29,13 @@ func (d *DataProcessor) Run() {
 	for !d.stop {
 		d.doSomething(i)
 		select {
-		case d.Ch <- i:
+		case d.ch <- i:
 		default:
 			d.writeToRedis(i)
 		}
 		i = i + 1
 	}
-	close(d.Ch)
+	close(d.ch)
 }
 
 func (d *DataProcessor) doSomething(i int) int {
